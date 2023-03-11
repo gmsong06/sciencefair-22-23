@@ -1,0 +1,49 @@
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(ggstatsplot)
+library(hrbrthemes)
+library(scales)
+library(ggpubr)
+library(data.table)
+library(stringr)
+library(tidyverse)
+library(writexl)
+library(rjson)
+library(RJSONIO)
+library(RCurl)
+library(jsonlite)
+library(lubridate)
+library(stringr) 
+library(stringi)
+library(readr)
+library(ggforce)
+library(corrplot)
+library(caret)
+library(neuralnet)
+library(nnet)
+library(e1071)
+library(randomForest)
+library(datasets)
+library(Amelia)
+library(GGally)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(ISLR)
+library(clusterGeneration)
+library(pastecs)
+library(gdata)
+library(pROC)
+
+
+PlotTheme <- theme(plot.title = element_text(size=14, face="bold.italic", hjust = 0.5),
+                   axis.title.x = element_text(size=14, face="bold"),
+                   axis.title.y = element_text(size=14, face="bold"),
+                   axis.text = element_text(size = 10, face = "bold"))
+
+LegendTheme <- theme(legend.text = element_text(size = 10, face = "bold"),
+                     legend.title = element_text(size = 12, face = "bold"))
+
+

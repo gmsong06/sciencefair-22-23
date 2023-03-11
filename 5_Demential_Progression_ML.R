@@ -1,0 +1,477 @@
+############################################# File 5 ##################################################
+################### Machine learning for the patients that have progression
+###### data used for ML is from File 3_Patients_Stats
+###### machine learning with Full FreeSurfer varibales
+###### machine learning with partial freesufer variables identified from File 1 and same as File 2
+###### Output: No (CN) or Yes (CN_MCI, CN_DMN, CN_MCI_DMN) Progression from CN
+###### MCI, MCI_DMN and DMN are excluded
+
+load("CogProg.RData")         # patients that has progressed
+load("ClinDia_Patient_stats.RData")    
+load("Clin_Centi2.RData")     # merged file: clinical + demo + centiloid
+load("Clin_FreeSuf2.RData")   # merged file: clinical + demo + freesurfer
+
+str(CogProg)
+# 'data.frame':	272 obs. of  8 variables:
+# $ OASISID     : chr  "OAS30007" "OAS30013" "OAS30019" "OAS30025" ...
+# $ age.at.visit: num  71.6 71.1 74.4 64.9 69.2 ...
+# $ CN          : num  7 NA 1 8 4 11 NA 1 6 11 ...
+# $ MCI         : num  5 4 NA NA 2 1 1 NA 1 1 ...
+# $ DMN         : num  1 4 2 1 7 NA 5 3 7 1 ...
+# $ CN_MCI      : num  7 NA NA NA 4 11 NA NA 6 11 ...
+# $ MCI_DMN     : num  5 4 NA NA 2 NA 1 NA 1 1 ...
+# $ CN_DMN      : num  NA NA 1 8 NA NA NA 1 NA NA ...
+str(ClinDia_Patient_stats)
+# 'data.frame':	7653 obs. of  9 variables:
+# $ OASISID       : chr  "OAS30001" "OAS30001" "OAS30001" "OAS30001" ...
+# $ days_to_visit : int  0 339 722 1106 1456 1894 2181 2699 3025 3332 ...
+# $ age.at.visit  : num  65.2 66.1 67.2 68.2 69.2 ...
+# $ NORMCOG       : Factor w/ 2 levels "0","1": 2 2 2 2 2 2 2 2 2 2 ...
+# $ DEMENTED      : Factor w/ 3 levels "0","1","3": 3 3 3 3 3 3 3 3 3 3 ...
+# $ years_to_Visit: num  0 1 2 3 4 5 6 7 8 9 ...
+# $ GENDER        : Factor w/ 2 levels "1","2": 2 2 2 2 2 2 2 2 2 2 ...
+# $ EDUC          : int  12 12 12 12 12 12 12 12 12 12 ...
+# $ HAND          : Factor w/ 4 levels "","B","L","R": 4 4 4 4 4 4 4 4 4 4 ...
+str(Clin_Centi2)
+# 'data.frame':	1585 obs. of  11 variables:
+# $ OASISID                     : chr  "OAS30001" "OAS30001" "OAS30001" "OAS30001" ...
+# $ years_to_Visit              : num  1 2 7 7 9 12 3 6 7 7 ...
+# $ days_to_visit               : int  339 722 2699 2699 3332 4349 1169 2263 2585 2630 ...
+# $ age.at.visit                : num  66.1 67.2 72.6 72.6 74.3 ...
+# $ NORMCOG                     : Factor w/ 2 levels "0","1": 2 2 2 2 2 2 2 2 2 2 ...
+# $ DEMENTED                    : Factor w/ 3 levels "0","1","3": 3 3 3 3 3 3 3 3 3 3 ...
+# $ GENDER                      : Factor w/ 2 levels "1","2": 2 2 2 2 2 2 1 1 1 2 ...
+# $ EDUC                        : int  12 12 12 12 12 12 18 18 18 18 ...
+# $ HAND                        : Factor w/ 4 levels "","B","L","R": 4 4 4 4 4 4 4 4 4 4 ...
+# $ tracer                      : Factor w/ 2 levels "AV45","PIB": 2 2 1 2 2 2 2 1 2 2 ...
+# $ Centiloid_fSUVR_TOT_CORTMEAN: num  4.24 5.8 8.78 3.9 5.02 ...
+
+#############
+#### if a patient has CN_MCI and then MCI_DMN, then the patient will be converted to CN_MCI_DMN
+# CN_MCI
+# MCI_DMN
+# CN_DMN
+# CN_MCI_DMN
+CogProg2 <- CogProg
+CogProg2$Progression <- ifelse(!is.na(CogProg$CN) & !is.na(CogProg$MCI) & !is.na(CogProg$DMN), "CN_MCI_DMN",
+                               ifelse(!is.na(CogProg$CN) & !is.na(CogProg$MCI) & is.na(CogProg$DMN), "CN_MCI", 
+                                      ifelse(is.na(CogProg$CN) & !is.na(CogProg$MCI) & !is.na(CogProg$DMN), 
+                                             "MCI_DMN", "CN_DMN")))
+view(CogProg2)
+summary(as.factor(CogProg2$Progression))
+# CN_DMN     CN_MCI CN_MCI_DMN    MCI_DMN 
+# 86         63         70         53 
+
+ProgID_List <- CogProg2$OASISID
+n_distinct(ClinDia_Patient_stats$OASISID)
+
+ClinDia_Patient_stats2 <- ClinDia_Patient_stats
+ClinDia_Patient_stats2$DementedLetter <- ifelse(ClinDia_Patient_stats2$DEMENTED == '3', 'CN', 
+                                               ifelse(ClinDia_Patient_stats2$DEMENTED == '0', 'MCI', 'DMN'))
+
+for (i in 1:nrow(ClinDia_Patient_stats2)) {
+  if (ClinDia_Patient_stats2$OASISID[i] %in% ProgID_List) {
+    idx <- which(ProgID_List == ClinDia_Patient_stats2$OASISID[i])[1]
+    ClinDia_Patient_stats2$ProgStatus[i] <- CogProg2$Progression[idx]
+  }
+  else {ClinDia_Patient_stats2$ProgStatus[i] <- as.character(ClinDia_Patient_stats2$DementedLetter[i])}
+}
+view(ClinDia_Patient_stats2)
+ClinDia_Patient_stats2$ProgStatus <- as.factor(ClinDia_Patient_stats2$ProgStatus)
+save(ClinDia_Patient_stats2, file = "ClinDia_Patient_stats2.RData")
+
+#### Prepare the files to merge
+ClinDia_Prog <- ClinDia_Patient_stats2 %>% dplyr::select(OASISID, years_to_Visit, DementedLetter, ProgStatus)
+Centi_cut <- Clin_Centi2 %>% dplyr::select(OASISID, years_to_Visit, Centiloid_fSUVR_TOT_CORTMEAN)
+Clin_FreeSuf2_cut <- Clin_FreeSuf2[, -(3:5)]
+str(Clin_FreeSuf2_cut)
+Clin_FreeSuf2_cut <- Clin_FreeSuf2_cut[, -(4:6)]
+Clin_FreeSuf2_cut <- Clin_FreeSuf2_cut[, -89]
+
+ClinDia_Prog_Centi <- merge(ClinDia_Prog, Centi_cut, by = c("OASISID", "years_to_Visit"))
+view(ClinDia_Prog_Centi)
+ClinDia_Prog_Centi_FreeSurf <- merge(ClinDia_Prog_Centi, Clin_FreeSuf2_cut, by = c("OASISID", "years_to_Visit"))
+view(ClinDia_Prog_Centi_FreeSurf)
+save(ClinDia_Prog_Centi_FreeSurf, file = "ClinDia_Prog_Centi_FreeSurf.RData")
+nrow(ClinDia_Prog_Centi_FreeSurf)   # 1822
+
+
+###### Find subjects that is CN with and without progression
+ProgFromCN <- filter(ClinDia_Prog_Centi_FreeSurf, DementedLetter == "CN" & grepl("CN", ProgStatus))
+nrow(ProgFromCN)                     # 1582
+str(ProgFromCN)
+ProgFromCN2 <- ProgFromCN %>% dplyr::select(-DementedLetter, -DEMENTED)
+str(ProgFromCN2)
+ProgFromCN2$ProgStatus <- as.factor(as.character(ProgFromCN2$ProgStatus))
+# levels(drop.levels(ProgFromCN2)$ProgStatus)
+# ProgFromCN2$ProgStatus
+# summary(ProgFromCN$ProgStatus)
+ProgFromCN2 <- ProgFromCN2 %>% dplyr::select(-Left.non.WM.hypointensities_volume)
+save(ProgFromCN2, file = "ProgFromCN2.RData")
+
+ProgFromCN3 <- ProgFromCN2[, -(1:2)]
+summary(ProgFromCN3$ProgStatus)
+ProgFromCN3$ProgStatus <- as.factor(ifelse(ProgFromCN3$ProgStatus == 'CN', 'NO', 'YES'))
+sum(ProgFromCN3$ProgStatus=="CN")
+
+###############################################################################################################
+####################### Modeling: Progression from CN to MCI and/or DMN (full Variables)
+###############################################################################################################
+
+####### parittion Data
+set.seed(4365677)
+ProgFromCN_sampling_vector <- createDataPartition(ProgFromCN3$ProgStatus, p = 0.80, list = FALSE)
+ProgFromCN_train <- ProgFromCN3[ProgFromCN_sampling_vector,]
+ProgFromCN_test <- ProgFromCN3[-ProgFromCN_sampling_vector,]
+
+# normalize the input data
+ProgFromCN_pp <- preProcess(ProgFromCN_train, method = c("range"))
+norm_ProgFromCN_train <- predict(ProgFromCN_pp, ProgFromCN_train)
+norm_ProgFromCN_test <- predict(ProgFromCN_pp, ProgFromCN_test)
+
+###########################################################
+############# use a neural network (nnet)##################
+###########################################################
+
+# create model
+# start_time <- proc.time()
+nn_Prog_CN_model <- nnet(ProgStatus ~ ., data = norm_ProgFromCN_train, size = 10, maxit = 10000, decay =0.01 )
+# end_time <- proc.time()
+# end_time - start_time
+
+# check accuracy of model
+nn_Prog_CN_train_predictions <- predict(nn_Prog_CN_model, norm_ProgFromCN_train, type = "class")
+mean(nn_Prog_CN_train_predictions == ProgFromCN_train$ProgStatus)    # 1
+table(ProgFromCN_train$ProgStatus, nn_Prog_CN_train_predictions)
+#       NO  YES
+# NO  1047    0
+# YES    0  220
+
+nn_Prog_CN_test_predictions <- predict(nn_Prog_CN_model, norm_ProgFromCN_test, type = "class")
+mean(nn_Prog_CN_test_predictions == norm_ProgFromCN_test$ProgStatus)  #0.8952381
+table(nn_Prog_CN_test_predictions, norm_ProgFromCN_test$ProgStatus)
+#      NO YES
+# NO  247  19
+# YES  14  35
+
+nn_Prog_CN_varImp <- varImp(nn_Prog_CN_model)
+nn_Prog_CN_varImp_df <- as.data.frame(nn_Prog_CN_varImp)
+nn_Prog_CN_varImp2 <- nn_Prog_CN_varImp_df[order(-nn_Prog_CN_varImp_df$Overall), ,drop = FALSE]
+nn_Prog_CN_varImp2$labels <- factor(rownames(nn_Prog_CN_varImp2))
+nn_Prog_CN_varImp2$labels <- reorder(nn_Prog_CN_varImp2$labels, nn_Prog_CN_varImp2$Overall)
+nn_Prog_CN_varImp3 <- nn_Prog_CN_varImp2[c(1:10), ]
+nn_Prog_CN_ImpVar <- rownames(nn_Prog_CN_varImp3)
+
+# plot the importance
+ggplot(data = nn_Prog_CN_model_varImp3, aes(x = labels,y = Overall)) +
+  geom_bar(position="dodge",stat="identity",width = 0, color = "black") + 
+  coord_flip() + 
+  geom_point(color='blue') + 
+  ylab("Importance Score") +
+  xlab("Variables") +
+  ggtitle("Feature Importance of Neural Network for Progression from CN") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  PlotTheme +
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+
+###########################################################
+####################### Random Forest ########################
+###########################################################
+rf_Prog_CN_model <- randomForest(ProgStatus ~ ., data = ProgFromCN_train, proximity = TRUE) 
+print(rf_Prog_CN_model )
+
+# Training data
+rf_Prog_CN_train_predicted <- predict(rf_Prog_CN_model, ProgFromCN_train)
+mean(rf_Prog_CN_train_predicted  == ProgFromCN_train$ProgStatus)    # 1
+confusionMatrix(rf_Prog_CN_train_predicted, ProgFromCN_train$ProgStatus)
+#       NO  YES
+# NO  1047    0
+# YES    0  220
+
+# Test data
+rf_Prog_CN_test_predicted <- predict(rf_Prog_CN_model, ProgFromCN_test)
+mean(rf_Prog_CN_test_predicted  == ProgFromCN_test$ProgStatus)    # 0.9015873
+confusionMatrix(rf_Prog_CN_test_predicted, ProgFromCN_test$ProgStatus)
+# Prediction  NO YES
+#         NO  261  31
+# YES   0  23
+
+# Find important factors
+rf_Prog_CN_varImp <- varImp(rf_Prog_CN_model)
+rf_Prog_CN_varImp2 <- rf_Prog_CN_varImp[order(-rf_Prog_CN_varImp$Overall), , drop = FALSE]
+rf_Prog_CN_varImp2$labels <- factor(rownames(rf_Prog_CN_varImp2))
+rf_Prog_CN_varImp2$labels <- reorder(rf_Prog_CN_varImp2$labels, rf_Prog_CN_varImp2$Overall)
+rf_Prog_CN_varImp3 <- rf_Prog_CN_varImp2[c(1:10), ]
+rf_Prog_CN_varImp3
+rf_Prog_CN_ImpVar <- rownames(rf_Prog_CN_varImp3)
+
+# plot the importance
+ggplot(data= rf_Prog_CN_varImp3, aes(x = labels,y = Overall)) +
+  geom_bar(position="dodge",stat="identity",width = 0, color = "black") + 
+  coord_flip() + 
+  geom_point(color='blue') + 
+  ylab("Importance Score") +
+  xlab("Variables") +
+  ggtitle("Feature Importance of Random Forest") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  PlotTheme +
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+
+
+###########################################################
+#################### Decision Tree ########################
+###########################################################
+# penalty matrix
+# penalty.matrix <- matrix(c(0,1,10,0), byrow = TRUE, nrow=2)
+# building the classification tree with rpart
+tree_Prog_CN_model <- rpart(ProgStatus ~ ., data = ProgFromCN_train, method = "class")
+#identify best cp value to use
+dt_Prog_CN_best <- tree_Prog_CN_model$cptable[which.min(tree_Prog_CN_model$cptable[,"xerror"]),"CP"]
+pruned_Prog_CN_tree <- prune(tree_Prog_CN_model, cp = dt_Prog_CN_best)
+# Visualize the decision tree with rpart.plot
+prp(pruned_Prog_CN_tree)
+#plot decision tree using custom arguments
+prp(pruned_Prog_CN_tree,
+    faclen = 1, #use full names for factor labels
+    extra = 1, #display number of observations for each terminal node
+    roundint = F) #don't round to integers in output
+#    digits = 3) #display 5 decimal places in output
+
+rpart.plot(pruned_Prog_CN_tree, type = 4)
+
+#Testing the training model
+tree_Prog_CN_train_pred <- predict(object = tree_Prog_CN_model, ProgFromCN_train[-1], type="class")
+#Calculating accuracy
+mean(ProgFromCN_train$ProgStatus == tree_Prog_CN_train_pred) # 0.9084451
+table(ProgFromCN_train$ProgStatus, tree_Prog_CN_train_pred)
+#       NO  YES
+# NO  1016   31
+# YES   85  135
+confusionMatrix(ProgFromCN_train$ProgStatus, tree_Prog_CN_train_pred)
+
+#Testing the test model
+tree_Prog_CN_test_pred <- predict(object = tree_Prog_CN_model, ProgFromCN_test[-1], type="class")
+#Calculating accuracy
+mean(ProgFromCN_test$ProgStatus == tree_Prog_CN_test_pred)    # 0.8444444
+table(ProgFromCN_test$ProgStatus, tree_Prog_CN_test_pred)
+#      NO YES
+# NO  246  15
+# YES  34  20
+confusionMatrix(ProgFromCN_test$ProgStatus, tree_Prog_CN_test_pred)
+
+tree_Prog_CN_varImp <- varImp(tree_Prog_CN_model)
+tree_Prog_CN_varImp2 <- tree_Prog_CN_varImp[order(-tree_Prog_CN_varImp$Overall), , drop = FALSE]
+tree_Prog_CN_varImp2$labels <- factor(rownames(tree_Prog_CN_varImp2))
+tree_Prog_CN_varImp2$labels <- reorder(tree_Prog_CN_varImp2$labels, tree_Prog_CN_varImp2$Overall)
+tree_Prog_CN_varImp3 <- tree_Prog_CN_varImp2[c(1:10), ]
+tree_Prog_CN_varImp3
+tree_Prog_CN_ImpVar <- rownames(tree_Prog_CN_varImp3)
+
+# plot the importance
+ggplot(data = tree_Prog_CN_varImp3, aes(x = labels,y = Overall)) +
+  geom_bar(position="dodge",stat="identity",width = 0, color = "black") + 
+  coord_flip() + 
+  geom_point(color='blue') + 
+  ylab("Importance Score") +
+  xlab("Variables") +
+  ggtitle("Feature Importance of Decision Tree") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  PlotTheme +
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+
+############################################
+################### post processing ########
+############################################
+
+Prog_CN_ImpVar_Com <- data.frame(unlist(nn_Prog_CN_model_ImpVar),
+                                 unlist(rf_Prog_CN_ImpVar), 
+                                 unlist(tree_Prog_CN_ImpVar))
+names(Prog_CN_ImpVar_Com) <- c("NeuralNetwork","RandomForest", "Decision Tree")
+View(Prog_CN_ImpVar_Com)
+write_xlsx(Prog_CN_ImpVar_Com,"Important_Factors_Prog_CN.xlsx")
+
+################################################################################
+############################## Modeling: Progression from MCI to DMN
+################################################################################
+
+###### Find subjects that is CN with and without progression
+ProgFromMCI <- filter(ClinDia_Prog_Centi_FreeSurf, DementedLetter == "MCI" & ProgStatus == "MCI_DMN")
+str(ProgFromMCI)                     # 21 obs. of  91 variables
+# All MCI has progressed to MDN
+ProgFromMCI2 <- ProgFromMCI %>% dplyr::select(-DementedLetter, -DEMENTED)
+str(ProgFromMCI2)
+ProgFromMCI2$ProgStatus <- as.factor(as.character(ProgFromMCI$ProgStatus))
+# levels(drop.levels(ProgFromCN2)$ProgStatus)
+ProgFromMCI2$ProgStatus
+# summary(ProgFromCN$ProgStatus)
+ProgFromMCI2 <- ProgFromMCI2 %>% dplyr::select(-Left.non.WM.hypointensities_volume)
+save(ProgFromMCI2, file = "ProgFromMCI2.RData")
+
+#### Conclusions:
+### after cleaning the data, looks like all the MCI has progressed to DMN
+
+###############################################################################################################
+####################### Modeling: Progression from CN to MCI and/or DMN (top 8 variable)
+###############################################################################################################
+ImpVarList <- c('ProgStatus', 'Centiloid_fSUVR_TOT_CORTMEAN','TOTAL_HIPPOCAMPUS_VOLUME', 'Left.Amygdala_volume',
+                'Right.Amygdala_volume', 'lh_middletemporal_thickness', 'Left.Accumbens.area_volume', 
+                'lh_temporalpole_thickness', 'lh_superiortemporal_thickness')
+
+ProgFromCN_Top8_train <- ProgFromCN_train %>% dplyr::select(ImpVarList)
+ProgFromCN_Top8_test <- ProgFromCN_test %>% dplyr::select(ImpVarList)
+norm_ProgFromCN_Top8_train <- norm_ProgFromCN_train %>% dplyr::select(ImpVarList)
+norm_ProgFromCN_Top8_test <- ProgFromCN_test %>% dplyr::select(ImpVarList)
+
+###########################################################
+############# use a neural network (nnet)##################
+###########################################################
+
+# create model
+# start_time <- proc.time()
+nn_Prog_CN_Top8_model <- nnet(ProgStatus ~ ., 
+                              data = norm_ProgFromCN_Top8_train, 
+                              size = 10, maxit = 10000, decay =0.01 )
+# end_time <- proc.time()
+# end_time - start_time
+
+# check accuracy of model
+nn_Prog_CN_train_Top8_predictions <- predict(nn_Prog_CN_Top8_model, norm_ProgFromCN_Top8_train, type = "class")
+mean(nn_Prog_CN_train_Top8_predictions == ProgFromCN_Top8_train$ProgStatus)   # 0.9044988
+table(nn_Prog_CN_train_Top8_predictions, ProgFromCN_Top8_train$ProgStatus)
+# nn_Prog_CN_train_Top8_predictions   NO  YES
+#                                NO  1020   94
+#                                YES   27  126
+
+
+nn_Prog_CN_test_Top8_predictions <- predict(nn_Prog_CN_Top8_model, norm_ProgFromCN_Top8_test, type = "class")
+mean(nn_Prog_CN_test_Top8_predictions == ProgFromCN_Top8_test$ProgStatus)    #0.8285714
+table(nn_Prog_CN_test_Top8_predictions, ProgFromCN_Top8_test$ProgStatus)
+# nn_Prog_CN_test_Top8_predictions  NO YES
+#                               NO 261  54
+
+nn_Prog_CN_Top8_varImp <- varImp(nn_Prog_CN_Top8_model)
+nn_Prog_CN_Top8_varImp2 <- nn_Prog_CN_Top8_varImp[order(-nn_Prog_CN_Top8_varImp$Overall), , drop = FALSE]
+nn_Prog_CN_Top8_varImp2$labels <- factor(rownames(nn_Prog_CN_Top8_varImp2))
+nn_Prog_CN_Top8_varImp2$labels <- reorder(nn_Prog_CN_Top8_varImp2$labels, nn_Prog_CN_Top8_varImp2$Overall)
+nn_Prog_CN_Top8_ImpVar <- rownames(nn_Prog_CN_Top8_varImp2)
+
+# plot the importance
+ggplot(data = nn_Prog_CN_Top8_varImp2, aes(x = labels,y = Overall)) +
+  geom_bar(position="dodge",stat="identity",width = 0, color = "black") + 
+  coord_flip() + 
+  geom_point(color='blue') + 
+  ylab("Importance Score") +
+  xlab("Variables") +
+  ggtitle("Feature Importance of Random Forest") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  PlotTheme +
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+
+
+###########################################################
+####################### Random Forest ########################
+###########################################################
+rf_Prog_CN_Top8_model <- randomForest(ProgStatus ~ ., data = ProgFromCN_Top8_train, proximity = TRUE) 
+print(rf_Prog_CN_Top8_model )
+
+# Training data
+rf_Prog_CN_Top8_train_predicted <- predict(rf_Prog_CN_Top8_model, ProgFromCN_Top8_train)
+mean(rf_Prog_CN_Top8_train_predicted  == ProgFromCN_Top8_train$ProgStatus)   # 1
+confusionMatrix(rf_Prog_CN_Top8_train_predicted, ProgFromCN_Top8_train$ProgStatus)
+# Prediction   NO  YES
+#        NO  1047    0
+#        YES    0  220
+
+# Test data
+rf_Prog_CN_Top8_test_predicted <- predict(rf_Prog_CN_Top8_model, ProgFromCN_Top8_test)
+mean(rf_Prog_CN_Top8_test_predicted  == ProgFromCN_Top8_test$ProgStatus)   # 0.8666667
+confusionMatrix(rf_Prog_CN_Top8_test_predicted, ProgFromCN_Top8_test$ProgStatus)
+# Prediction  NO YES
+#        NO  253  34
+#       YES   8  20
+
+rf_Prog_CN_Top8_varImp <- varImp(rf_Prog_CN_Top8_model)
+rf_Prog_CN_Top8_varImp2 <- rf_Prog_CN_Top8_varImp[order(-rf_Prog_CN_Top8_varImp$Overall), , drop = FALSE]
+rf_Prog_CN_Top8_varImp2$labels <- factor(rownames(rf_Prog_CN_Top8_varImp2))
+rf_Prog_CN_Top8_varImp2$labels <- reorder(rf_Prog_CN_Top8_varImp2$labels, rf_Prog_CN_Top8_varImp2$Overall)
+rf_Prog_CN_Top8_ImpVar <- rownames(rf_Prog_CN_Top8_varImp2)
+
+# plot the importance
+ggplot(data = rf_Prog_CN_Top8_varImp2, aes(x = labels,y = Overall)) +
+  geom_bar(position="dodge",stat="identity",width = 0, color = "black") + 
+  coord_flip() + 
+  geom_point(color='blue') + 
+  ylab("Importance Score") +
+  xlab("Variables") +
+  ggtitle("Feature Importance of Random Forest") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  PlotTheme +
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+
+
+###########################################################
+#################### Decision Tree ########################
+###########################################################
+
+tree_Prog_CN_Top8_model <- rpart(ProgStatus ~ ., data = ProgFromCN_Top8_train, method = "class")
+#identify best cp value to use
+dt_Prog_CN_Top8_best <- tree_Prog_CN_Top8_model$cptable[which.min(tree_Prog_CN_Top8_model$cptable[,"xerror"]),"CP"]
+pruned_Prog_CN_Top8_tree <- prune(tree_Prog_CN_Top8_model, dt_Prog_CN_Top8_best)
+# Visualize the decision tree with rpart.plot
+prp(pruned_Prog_CN_Top8_tree)
+#plot decision tree using custom arguments
+prp(pruned_Prog_CN_Top8_tree,
+    faclen = 1, #use full names for factor labels
+    extra = 1, #display number of observations for each terminal node
+    roundint = F) #don't round to integers in output
+#    digits = 3) #display 5 decimal places in output
+
+rpart.plot(pruned_Prog_CN_Top8_tree, type = 4)
+
+#Testing the training model
+tree_Prog_CN_train_Top8_pred <- predict(object = tree_Prog_CN_Top8_model, ProgFromCN_Top8_train[-1], type="class")
+#Calculating accuracy
+mean(ProgFromCN_Top8_train$ProgStatus == tree_Prog_CN_train_Top8_pred)   # 0.8823994
+table(ProgFromCN_Top8_train$ProgStatus, tree_Prog_CN_train_Top8_pred)
+#       NO  YES
+# NO  1030   17
+# YES  132   88
+confusionMatrix(ProgFromCN_Top8_train$ProgStatus, tree_Prog_CN_train_Top8_pred)
+
+tree_Prog_CN_test_Top8_pred <- predict(object = tree_Prog_CN_Top8_model, ProgFromCN_Top8_test[-1], type="class")
+#Calculating accuracy
+mean(ProgFromCN_Top8_test$ProgStatus == tree_Prog_CN_test_Top8_pred)  # 0.8603175
+table(ProgFromCN_Top8_test$ProgStatus, tree_Prog_CN_test_Top8_pred)
+#      NO YES
+# NO  255   6
+# YES  38  16
+confusionMatrix(ProgFromCN_Top8_test$ProgStatus, tree_Prog_CN_test_Top8_pred)
+
+tree_Prog_CN_Top8_varImp <- varImp(tree_Prog_CN_Top8_model)
+tree_Prog_CN_Top8_varImp2 <- tree_Prog_CN_Top8_varImp[order(-tree_Prog_CN_Top8_varImp$Overall), , drop = FALSE]
+tree_Prog_CN_Top8_varImp2$labels <- factor(rownames(tree_Prog_CN_Top8_varImp2))
+tree_Prog_CN_Top8_varImp2$labels <- reorder(tree_Prog_CN_Top8_varImp2$labels, tree_Prog_CN_Top8_varImp2$Overall)
+tree_Prog_CN_Top8_ImpVar <- rownames(tree_Prog_CN_Top8_varImp2)
+
+# plot the importance
+ggplot(data = tree_Prog_CN_Top8_varImp2, aes(x = labels,y = Overall)) +
+  geom_bar(position="dodge",stat="identity",width = 0, color = "black") + 
+  coord_flip() + 
+  geom_point(color='blue') + 
+  ylab("Importance Score") +
+  xlab("Variables") +
+  ggtitle("Feature Importance of Random Forest") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  PlotTheme +
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+
+############################################
+################### post processing ########
+############################################
+
+Prog_CN_Top8_ImpVar_Com <- data.frame(unlist(nn_Prog_CN_Top8_ImpVar),
+                                      unlist(rf_Prog_CN_Top8_ImpVar), 
+                                      unlist(tree_Prog_CN_Top8_ImpVar))
+names(Prog_CN_Top8_ImpVar_Com) <- c("NeuralNetwork","RandomForest", "Decision Tree")
+View(Prog_CN_Top8_ImpVar_Com)
+write_xlsx(Prog_CN_Top8_ImpVar_Com,"Important_Factors_Prog_CN_Top8.xlsx")

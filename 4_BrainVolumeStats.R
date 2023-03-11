@@ -1,0 +1,107 @@
+############################################ File 4 #######################################
+#######################Stats on Whole Body volume
+
+load("ClinDia_Patient.RData")
+str(ClinDia_Patient)
+load("Freesurf_raw.RData")
+clicFs_raw <- merge(ClinDia_Patient, Freesurf_raw, by=c("OASISID", "years_to_Visit"))
+str(clicFs_raw)    # 2164 obs. of  203 variables
+save(clicFs_raw, file = "clicFs_raw.RData")
+
+clicFs_raw_cut <- clicFs_raw[c(1:16)]
+str(clicFs_raw_cut)
+clicFs_raw_cut2 <- clicFs_raw_cut[-c(2:5)]
+save(clicFs_raw_cut2, file = "clicFs_raw_cut2.RData")
+load("clicFs_raw_cut2.RData")
+str(clicFs_raw_cut2)
+
+clicFs_raw_cut2_measure <- clicFs_raw_cut2[-c(1:2)]
+zv2 <- apply(clicFs_raw_cut2_measure, 2, function(x) length(unique(x)) == 1)
+dfr2 <- clicFs_raw_cut2_measure[, !zv2]
+n2=length(colnames(dfr2))
+clicFs_raw_cut2_coor <- cor(dfr2[,1:n2],use="complete.obs")
+corrplot(clicFs_raw_cut2_coor, method="number")
+
+highlyCorrelated2 <- findCorrelation(clicFs_raw_cut2_coor, cutoff=(0.8),verbose = FALSE)
+important_var2 = colnames(clicFs_raw_cut2_measure[,-highlyCorrelated2])  #get only weak correlation
+important_var2     
+# "IntraCranialVol"          "lhCortexVol"              "SubCortGrayVol"           "rhCorticalWhiteMatterVol"
+clicFs_BrainVolume <- clicFs_raw_cut %>% dplyr::select(OASISID, years_to_Visit, DEMENTED, 
+                                                       IntraCranialVol, TotalGrayVol, SubCortGrayVol, 
+                                                       CorticalWhiteMatterVol)
+clicFs_BrainVolume$WBV <- clicFs_BrainVolume$TotalGrayVol + clicFs_BrainVolume$CorticalWhiteMatterVol 
+save(clicFs_BrainVolume, file = "clicFs_BrainVolume.RData")
+load("clicFs_BrainVolume.RData")
+
+stat.desc(clicFs_BrainVolume$WBV)
+# nbr.val     nbr.null       nbr.na          min          max        range          sum       median         mean 
+# 2.164000e+03 0.000000e+00 0.000000e+00 6.799019e+05 1.406573e+06 7.266710e+05 2.115055e+09 9.684000e+05 9.773822e+05 
+# SE.mean CI.mean.0.95          var      std.dev     coef.var 
+# 2.278976e+03 4.469212e+03 1.123924e+10 1.060153e+05 1.084686e-01 
+tapply(clicFs_BrainVolume$WBV, clicFs_BrainVolume$DEMENTED, mean)
+# 0        1        3 
+# 967331.1 945415.0 983528.4
+tapply(clicFs_BrainVolume$WBV, clicFs_BrainVolume$DEMENTED, sd)
+# 0        1        3 
+# 100255.2 105382.5 105557.6 
+
+# Violin plot
+
+clicFs_BrainVolume$DEMENTED = factor(clicFs_BrainVolume$DEMENTED, levels=c("3", "0", "1"))
+ggplot(data = clicFs_BrainVolume, mapping = aes(y = WBV,                     
+                                        x = DEMENTED,                           
+                                        color = DEMENTED)) +                      
+  geom_boxplot()+ 
+  #geom_jitter() +
+  PlotTheme +
+  #  scale_fill_discrete(name = "Cognition Condition", labels = c("Not Demented", "Demented", "Normal Cognition")) +
+  scale_fill_manual(values = c("green4", "#E7B800", "#FC4E07")) +
+  scale_color_manual(values = c("green4", "#E7B800", "#FC4E07")) +
+  LegendTheme +
+  labs(title = "Total Brain Volume vs. Cognitive Normality")
+
+
+cdata <- ddply(clicFs_BrainVolume, c("DEMENTED"), summarise,
+               N    = length(WBV),
+               mean = mean(WBV),
+               sd   = sd(WBV))
+cdata
+
+clicFs_BrainVolume_2groups <- filter(clicFs_BrainVolume, DEMENTED != "3")
+summary(clicFs_BrainVolume_2groups$DEMENTED)
+
+#### t-test
+t.test(WBV ~ DEMENTED, data = clicFs_BrainVolume_2groups)   
+# significant difference among groups
+
+#### anova
+# WBV_aov <- aov(WBV ~ DEMENTED, data = clicFs_BrainVolume)
+# summary.lm(WBV_aov)
+
+##############################################################################################
+########### Day 0
+###############################################################################################
+str(clicFs_BrainVolume)
+clicFs_BrainVolume_Day0 <- filter(clicFs_BrainVolume, years_to_Visit == 0)
+nrow(clicFs_BrainVolume_Day0)
+save(clicFs_BrainVolume_Day0, file = "clicFs_BrainVolume_Day0.Rdata")
+load("clicFs_BrainVolume_Day0.Rdata")
+
+ggplot(data = clicFs_BrainVolume_Day0, mapping = aes(y = WBV,                     
+                                                     x = DEMENTED,                           
+                                                     color = DEMENTED, fill = DEMENTED)) +                      
+  geom_boxplot()+ 
+  geom_jitter() +
+  PlotTheme +
+  #  scale_fill_discrete(name = "Cognition Condition", labels = c("Not Demented", "Demented", "Normal Cognition")) +
+  scale_fill_manual(values = c("#E7B800", "#FC4E07", "green4")) +
+  scale_color_manual(values = c("#E7B800", "#FC4E07", "green4")) +
+  LegendTheme +
+  labs(title = "Total Brain Volume at Day Zero vs. Cognitive Normality")
+
+
+clicFs_BrainVolume_Day0_2groups <- filter(clicFs_BrainVolume_Day0, DEMENTED != "0")
+t.test(WBV ~ DEMENTED, data = clicFs_BrainVolume_Day0_2groups)   # has signicaicant difference
+
+
+

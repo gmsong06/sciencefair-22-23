@@ -1,0 +1,651 @@
+######### This file is focused on Recursive Feature Elimination for all three:
+# DEMENTED: Load data from file 1;
+# VisitProg: load data from file 5.5
+# Day_Zero: Load data from file 6
+
+#### All the files use two models: Random Forest and Tree Bagging 
+
+
+ref_size <- c(1:20, 30, 40, 50, 60, 80)
+control <- rfeControl(functions = rfFuncs, # random forest
+                      method = "repeatedcv", # repeated cv
+                      repeats = 5, # number of repeats
+                      number = 10) # number of folds
+
+treeBagcontrol <- rfeControl(functions = treebagFuncs, # random forest
+                             method = "repeatedcv", # repeated cv
+                             repeats = 5, # number of repeats
+                             number = 10) # number of folds
+
+#############################################################################################################
+############################ DEMENTED: From File 1 ##########################################################
+#############################################################################################################
+
+####################################################
+#######################Random Forest ###############
+####################################################
+
+load("DEMENTED_train.RData")
+load("DEMENTED_test.RData")
+
+x_DEMENTED_train <- DEMENTED_train[, -1]
+y_DEMENTED_train <- DEMENTED_train[, 1]
+
+x_DEMENTED_test <- DEMENTED_test[, -1]
+y_DEMENTED_test <- DEMENTED_test[, 1]
+
+DEMENTED_rfe2 <- rfe(x = x_DEMENTED_train, 
+                     y = y_DEMENTED_train, 
+                     sizes = ref_size,
+                     rfeControl = control)
+DEMENTED_rfe2
+
+# Recursive feature selection
+# 
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.8453 0.2797    0.01966 0.08577         
+# 2   0.8997 0.4748    0.01685 0.10677         
+# 3   0.9002 0.4829    0.02056 0.11518         
+# 4   0.9006 0.4906    0.01938 0.11454         
+# 5   0.9034 0.4978    0.01651 0.10521         
+# 6   0.9055 0.5013    0.01545 0.10388         
+# 7   0.9058 0.4958    0.01686 0.11254         
+# 8   0.9049 0.4912    0.01385 0.09574         
+# 9   0.9051 0.4969    0.01527 0.09976         
+# 10   0.9054 0.4980    0.01699 0.10875         
+# 11   0.9049 0.4898    0.01638 0.10835         
+# 12   0.9040 0.4836    0.01451 0.09435         
+# 13   0.9043 0.4825    0.01569 0.10405         
+# 14   0.9048 0.4843    0.01575 0.10449         
+# 15   0.9051 0.4833    0.01579 0.10461         
+# 16   0.9061 0.4930    0.01607 0.10474         
+# 17   0.9066 0.4947    0.01573 0.10370        *
+#   18   0.9045 0.4814    0.01452 0.09667         
+# 19   0.9058 0.4872    0.01465 0.09825         
+# 20   0.9057 0.4831    0.01472 0.10074         
+# 30   0.9037 0.4621    0.01544 0.10653         
+# 40   0.9030 0.4541    0.01436 0.10413         
+# 50   0.9027 0.4464    0.01634 0.11454         
+# 60   0.9018 0.4290    0.01329 0.09880         
+# 80   0.8990 0.3934    0.01379 0.11304         
+# 85   0.9000 0.4039    0.01363 0.10330         
+# 
+# The top 5 variables (out of 17):
+#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, Left.Amygdala_volume, 
+# lh_middletemporal_thickness, Right.Amygdala_volume
+
+save(DEMENTED_rfe2, file = "DEMENTED_rfe2.RData")
+load("DEMENTED_rfe2.RData")
+confusionMatrix(DEMENTED_rfe2)
+# Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+# 
+# (entries are percentual average cell counts across resamples)
+# 
+# Reference
+# Prediction    0    1    3
+# 0  0.5  0.0  0.1
+# 1  1.0  4.4  0.9
+# 3  2.7  4.5 85.8
+# 
+# Accuracy (average) : 0.9066
+
+ggplot(data = DEMENTED_rfe2, metric = "Accuracy") +
+  theme_bw() +
+  theme(axis.title.x = element_text(size=14, face="bold"),
+        axis.title.y = element_text(size=14, face="bold"),
+        axis.text = element_text(size = 14, face = "bold"))
+
+DEMENTED_varimp_data <- data.frame(feature = row.names(varImp(DEMENTED_rfe2))[1:10],
+                                    importance = varImp(DEMENTED_rfe2)[1:10, 1])
+DEMENTED_varimp_data
+# Overall
+# Centiloid_fSUVR_TOT_CORTMEAN      17.990925
+# TOTAL_HIPPOCAMPUS_VOLUME          13.690887
+# Left.Amygdala_volume               8.493141
+# lh_middletemporal_thickness        8.150358
+# Right.Amygdala_volume              7.062642
+# Right.Inf.Lat.Vent_volume          7.034519
+# lh_inferiortemporal_thickness      6.569979
+# Left.Accumbens.area_volume         6.537992
+# lh_lateralorbitofrontal_volume     6.160786
+# lh_lateralorbitofrontal_thickness  6.100141
+# rh_inferiortemporal_thickness      5.813300
+# lh_superiortemporal_thickness      5.702618
+# lh_parahippocampal_volume          5.475015
+# rh_inferiorparietal_thickness      5.433586
+# lh_lateraloccipital_thickness      5.117261
+# lh_fusiform_thickness              5.051513
+# SubCortGrayVol                     4.911731
+# lh_supramarginal_thickness         4.851681
+# lh_temporalpole_volume             4.850936
+# lh_medialorbitofrontal_thickness   4.774478
+# lh_caudalmiddlefrontal_volume      4.689674
+# Right.Thalamus.Proper_volume       4.653768
+# rh_cuneus_thickness                4.629022
+# Right.Putamen_volume               4.627973
+# rh_parsopercularis_thickness       4.491856
+# lh_temporalpole_thickness          4.488446
+# Left.Cerebellum.Cortex_volume      4.477741
+# CC_Posterior_volume                4.424581
+# rh_superiortemporal_volume         4.374137
+# rh_bankssts_thickness              4.359301
+# lh_precentral_thickness            4.065789
+
+save(DEMENTED_varimp_data, file = "DEMENTED_varimp_data.RData")
+load("DEMENTED_varimp_data.RData")
+
+postResample(predict(DEMENTED_rfe2, x_DEMENTED_test), y_DEMENTED_test)
+
+# Accuracy     Kappa 
+# 0.8982036 0.4650462 
+
+# plot the importance
+ggplot(data = DEMENTED_varimp_data, 
+       aes(x = reorder(feature, importance), y = importance, fill = feature)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  labs(x = "Features", y = "Variable Importance") + 
+  #geom_text(aes(label = round(importance, 2)), vjust = 0.5, color="white", size = 4) + 
+  PlotTheme + 
+  coord_flip() +
+  theme(legend.position = "none") +
+  PlotTheme
+
+####################################################
+####################### TreeBag model ##############
+####################################################
+
+
+DEMENTED_rfe_treeBag <- rfe(x = x_DEMENTED_train, 
+                            y = y_DEMENTED_train, 
+                            sizes = ref_size,
+                            rfeControl = treeBagcontrol)
+DEMENTED_rfe_treeBag
+# Recursive feature selection
+
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.8450 0.2708    0.02316 0.10415         
+# 2   0.8849 0.4294    0.02151 0.10974         
+# 3   0.8961 0.4822    0.01710 0.08828         
+# 4   0.8958 0.4813    0.01725 0.09184         
+# 5   0.8943 0.4785    0.02084 0.09655         
+# 6   0.8966 0.4913    0.01937 0.09934         
+# 7   0.8955 0.4822    0.02048 0.10695         
+# 8   0.8967 0.4833    0.01975 0.10153         
+# 9   0.8987 0.4996    0.01943 0.10524         
+# 10   0.8963 0.4860    0.01856 0.10000         
+# 11   0.8996 0.5012    0.01847 0.09953         
+# 12   0.9002 0.5041    0.02023 0.10334         
+# 13   0.9000 0.4937    0.01804 0.09546         
+# 14   0.9002 0.5009    0.01895 0.10226         
+# 15   0.9000 0.4995    0.01945 0.09866         
+# 16   0.9014 0.5057    0.02049 0.10695         
+# 17   0.8984 0.4850    0.01933 0.10485         
+# 18   0.9024 0.5018    0.01853 0.10264        *
+#   19   0.9014 0.5066    0.01816 0.10035         
+# 20   0.9006 0.4982    0.01752 0.09918         
+# 30   0.9021 0.5008    0.01778 0.10122         
+# 40   0.9009 0.4927    0.01655 0.10429         
+# 50   0.8981 0.4818    0.01742 0.10667         
+# 60   0.8994 0.4846    0.01823 0.10577         
+# 80   0.8996 0.4948    0.01879 0.10619         
+# 85   0.9002 0.4933    0.01769 0.09851         
+# 
+# The top 5 variables (out of 18):
+#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, Left.Amygdala_volume, 
+# Right.Amygdala_volume, lh_middletemporal_thickness
+
+save(DEMENTED_rfe_treeBag, file = "DEMENTED_rfe_treeBag.RData")
+load("DEMENTED_rfe_treeBag.RData")
+
+predictors(DEMENTED_rfe_treeBag)
+# [1] "Centiloid_fSUVR_TOT_CORTMEAN"  "TOTAL_HIPPOCAMPUS_VOLUME"      "Left.Amygdala_volume"         
+# [4] "Right.Amygdala_volume"         "lh_middletemporal_thickness"   "Left.Accumbens.area_volume"   
+# [7] "CC_Posterior_volume"           "Right.Inf.Lat.Vent_volume"     "X4th.Ventricle_volume"        
+# [10] "SubCortGrayVol"                "CSF_volume"                    "lh_superiortemporal_thickness"
+# [13] "rh_inferiortemporal_thickness" "lh_fusiform_thickness"         "lh_lateraloccipital_thickness"
+# [16] "Left.Cerebellum.Cortex_volume" "X5th.Ventricle_volume"         "Right.Thalamus.Proper_volume" 
+
+confusionMatrix(DEMENTED_rfe_treeBag)
+# Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+# 
+# (entries are percentual average cell counts across resamples)
+# 
+# Reference
+# Prediction    0    1    3
+# 0  0.6  0.2  0.4
+# 1  1.0  4.7  1.4
+# 3  2.7  4.1 84.9
+# 
+# Accuracy (average) : 0.9024
+
+ggplot(data = DEMENTED_rfe_treeBag, metric = "Accuracy") + theme_bw()
+ggplot(data = DEMENTED_rfe_treeBag, metric = "Kappa") + theme_bw()
+
+DEMENTED_treeBag_varimp_data <- data.frame(feature = row.names(varImp(DEMENTED_rfe_treeBag))[1:10],
+                                           importance = varImp(DEMENTED_rfe_treeBag)[1:10, 1])
+save(DEMENTED_treeBag_varimp_data, file = "DEMENTED_treeBag_varimp_data.RData")
+load("DEMENTED_treeBag_varimp_data.RData")
+
+postResample(predict(DEMENTED_rfe_treeBag, x_DEMENTED_test), y_DEMENTED_test)
+# Accuracy     Kappa 
+# 0.8802395 0.3787202  
+
+# plot the importance
+ggplot(data = DEMENTED_treeBag_varimp_data, 
+       aes(x = reorder(feature, importance), y = importance, fill = feature)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  labs(x = "Features", y = "Variable Importance") + 
+  #geom_text(aes(label = round(importance, 2)), vjust = 0.5, color="white", size = 4) + 
+  PlotTheme + 
+  coord_flip() +
+  theme(legend.position = "none") +
+  PlotTheme
+
+#############################################################################################################
+############################ VisitProg: From File 5.5 #######################################################
+#############################################################################################################
+
+####################################################
+#######################Random Forest ###############
+####################################################
+
+load("VisitProg_train.RData")
+load("VisitProg_test.RData")
+
+x_VisitProg_train <- VisitProg_train[, -1]
+y_VisitProg_train <- VisitProg_train[, 1]
+
+x_VisitProg_test <- VisitProg_test[, -1]
+y_VisitProg_test <- VisitProg_test[, 1]
+
+VisitProg_rfe1 <- rfe(x = x_VisitProg_train, 
+                      y = y_VisitProg_train, 
+                      sizes = ref_size,
+                      rfeControl = control)
+# Recursive feature selection
+save(VisitProg_rfe1, file = "VisitProg_rfe1.RData")
+load("VisitProg_rfe1.RData")
+
+VisitProg_rfe1 
+
+
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.7520 0.3237    0.02881 0.07856         
+# 2   0.7988 0.3931    0.02898 0.08576         
+# 3   0.8328 0.4827    0.02696 0.09494         
+# 4   0.8367 0.4959    0.02532 0.08948         
+# 5   0.8399 0.5003    0.02584 0.09402         
+# 6   0.8423 0.5026    0.02369 0.08806         
+# 7   0.8439 0.5009    0.02306 0.09235         
+# 8   0.8453 0.5050    0.02259 0.08889         
+# 9   0.8472 0.5129    0.02799 0.10640         
+# 10   0.8478 0.5144    0.02344 0.09213         
+# 11   0.8500 0.5200    0.02404 0.09411         
+# 12   0.8531 0.5274    0.02460 0.09683         
+# 13   0.8528 0.5242    0.02149 0.08631         
+# 14   0.8519 0.5194    0.02188 0.08576         
+# 15   0.8493 0.5072    0.02093 0.08640         
+# 16   0.8509 0.5173    0.02274 0.08641         
+# 17   0.8515 0.5175    0.02283 0.08788         
+# 18   0.8522 0.5187    0.02122 0.08244         
+# 19   0.8526 0.5216    0.02221 0.08554         
+# 20   0.8526 0.5170    0.02110 0.08386         
+# 30   0.8557 0.5226    0.02132 0.08866        *
+# 40   0.8553 0.5149    0.01989 0.08844         
+# 50   0.8547 0.5085    0.01936 0.08654         
+# 60   0.8553 0.5082    0.02035 0.09187         
+# 80   0.8513 0.4867    0.02149 0.09769         
+#         85   0.8529 0.4956    0.02145 0.09748         
+# 
+# The top 5 variables (out of 30):
+#    Centiloid_fSUVR_TOT_CORTMEAN, Right.Inf.Lat.Vent_volume, TOTAL_HIPPOCAMPUS_VOLUME, 
+# Left.Amygdala_volume, Right.Amygdala_volume
+
+confusionMatrix(VisitProg_rfe1)
+# Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+# 
+# (entries are percentual average cell counts across resamples)
+# 
+# Reference
+# Prediction   CN  DMN Prog
+# CN   75.8  3.9  9.4
+# DMN   0.3  3.4  0.2
+# Prog  0.4  0.2  6.4
+# 
+# Accuracy (average) : 0.8557
+
+ggplot(data = VisitProg_rfe1, metric = "Accuracy") + theme_bw()
+ggplot(data = VisitProg_rfe1, metric = "Kappa") + theme_bw()
+
+VisitProg_varimp_data <- data.frame(feature = row.names(varImp(VisitProg_rfe1))[1:10],
+                                    importance = varImp(VisitProg_rfe1)[1:10, 1])
+save(VisitProg_varimp_data, file = "VisitProg_varimp_data.RData")
+
+ggplot(data = VisitProg_varimp_data, 
+       aes(x = reorder(feature, importance), y = importance, fill = feature)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  labs(x = "Features", y = "Variable Importance") + 
+  #geom_text(aes(label = round(importance, 2)), vjust = 0.5, color="white", size = 4) + 
+  theme_bw() + 
+  coord_flip() +
+  theme(legend.position = "none") +
+  PlotTheme
+
+
+postResample(predict(VisitProg_rfe1, x_VisitProg_test), y_VisitProg_test)
+#   Accuracy     Kappa 
+# 0.8588235 0.5334877 
+
+####################################################
+####################### TreeBag model ##############
+####################################################
+VisitProg_rfe_treeBag2 <- rfe(x = x_VisitProg_train, 
+                             y = y_VisitProg_train, 
+                             sizes = ref_size,
+                             rfeControl = treeBagcontrol)
+VisitProg_rfe_treeBag2
+
+# Recursive feature selection
+# 
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.7515 0.3194    0.03262 0.09001         
+# 2   0.7902 0.3907    0.03087 0.09620         
+# 3   0.8234 0.4743    0.02626 0.08754         
+# 4   0.8260 0.4767    0.02587 0.08536         
+# 5   0.8291 0.4845    0.02708 0.09298         
+# 6   0.8367 0.5097    0.02419 0.07845         
+# 7   0.8365 0.5090    0.02953 0.09906         
+# 8   0.8346 0.5052    0.02139 0.07373         
+# 9   0.8361 0.5082    0.01971 0.07428         
+# 10   0.8396 0.5167    0.02162 0.07722         
+# 11   0.8394 0.5195    0.02305 0.07741         
+# 12   0.8412 0.5231    0.02491 0.08797         
+# 13   0.8412 0.5214    0.02657 0.09077         
+# 85   0.8494 0.5357    0.02117 0.07491        *
+#   
+#   The top 5 variables (out of 85):
+#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, 
+# Right.Inf.Lat.Vent_volume, Left.Amygdala_volume, Right.Amygdala_volume
+
+
+ggplot(data = VisitProg_rfe_treeBag2, metric = "Accuracy") + theme_bw()
+
+VisitProg_rfe_treeBag <- rfe(x = x_VisitProg_train, 
+                            y = y_VisitProg_train, 
+                            sizes = ref_size,
+                            rfeControl = treeBagcontrol)
+
+save(VisitProg_rfe_treeBag, file = "VisitProg_rfe_treeBag.RData")
+load("VisitProg_rfe_treeBag.RData")
+
+VisitProg_rfe_treeBag
+# Recursive feature selection
+
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.7469 0.3092    0.03234 0.08221         
+# 2   0.7921 0.3934    0.02810 0.09278         
+# 3   0.8213 0.4757    0.02602 0.07812         
+# 4   0.8239 0.4749    0.02739 0.08030         
+# 5   0.8285 0.4880    0.02590 0.08217         
+# 6   0.8335 0.5000    0.02903 0.09253         
+# 7   0.8351 0.5036    0.02231 0.07252         
+# 8   0.8379 0.5154    0.02325 0.07326         
+# 9   0.8365 0.5071    0.02406 0.08384         
+# 10   0.8368 0.5099    0.02640 0.08622         
+# 11   0.8365 0.5120    0.02447 0.08101         
+# 12   0.8359 0.5051    0.02690 0.08664         
+# 13   0.8427 0.5288    0.02060 0.06988         
+# 14   0.8408 0.5239    0.02513 0.08385         
+# 15   0.8437 0.5280    0.02560 0.08302         
+# 16   0.8433 0.5241    0.02437 0.08471         
+# 17   0.8417 0.5255    0.02314 0.07418         
+# 18   0.8430 0.5290    0.02524 0.08253         
+# 19   0.8459 0.5295    0.02499 0.09090         
+# 20   0.8441 0.5276    0.02384 0.08266         
+# 30   0.8480 0.5379    0.02538 0.08861         
+# 40   0.8493 0.5373    0.02987 0.10143         
+# 50   0.8545 0.5546    0.02429 0.08422        *
+#   60   0.8539 0.5528    0.02277 0.07905         
+# 80   0.8528 0.5468    0.02603 0.09112         
+# 85   0.8488 0.5347    0.02249 0.08159         
+# 
+# The top 5 variables (out of 50):
+#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, 
+# Right.Inf.Lat.Vent_volume, Left.Amygdala_volume, Right.Amygdala_volume
+
+
+
+predictors(VisitProg_rfe_treeBag)
+
+confusionMatrix(VisitProg_rfe_treeBag)
+# Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+# 
+# (entries are percentual average cell counts across resamples)
+# 
+# Reference
+# Prediction   CN  DMN Prog
+#       CN   74.1  2.9  8.3
+#       DMN   0.7  4.0  0.4
+#       Prog  1.7  0.6  7.4
+# 
+# Accuracy (average) : 0.8545
+
+ggplot(data = VisitProg_rfe_treeBag, metric = "Accuracy") + theme_bw()
+ggplot(data = VisitProg_rfe_treeBag, metric = "Kappa") + theme_bw()
+
+VisitProg_treeBag_varimp_data <- data.frame(feature = row.names(varImp(VisitProg_rfe_treeBag))[1:10],
+                                           importance = varImp(VisitProg_rfe_treeBag)[1:10, 1])
+save(VisitProg_treeBag_varimp_data, file = "VisitProg_treeBag_varimp_data.RData")
+
+postResample(predict(VisitProg_rfe_treeBag, x_VisitProg_test), y_VisitProg_test)
+#  Accuracy     Kappa 
+# 0.8529412 0.5597908   
+
+# plot the importance
+ggplot(data = VisitProg_treeBag_varimp_data, 
+       aes(x = reorder(feature, importance), y = importance, fill = feature)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  labs(x = "Features", y = "Variable Importance") + 
+  #geom_text(aes(label = round(importance, 2)), vjust = 0.5, color="white", size = 4) + 
+  theme_bw() + 
+  coord_flip() +
+  theme(legend.position = "none") +
+  PlotTheme
+
+#############################################################################################################
+############################ Prog Day 0 ########################################################
+#############################################################################################################
+
+####################################################
+#######################Random Forest ###############
+####################################################
+
+load("Day_Zero_train.RData")
+load("Day_Zero_test.RData")
+
+x_Day_Zero_train <- Day_Zero_train[, -1]
+y_Day_Zero_train <- Day_Zero_train[, 1]
+
+x_Day_Zero_test <- Day_Zero_test[, -1]
+y_Day_Zero_test <- Day_Zero_test[, 1]
+
+Day_Zero_rfe1 <- rfe(x = x_Day_Zero_train, 
+                     y = y_Day_Zero_train, 
+                     sizes = ref_size,
+                     rfeControl = control)
+save(Day_Zero_rfe1, file = "Day_Zero_rfe1.RData")
+load("Day_Zero_rfe1.RData")
+
+Day_Zero_rfe1 
+
+# Recursive feature selection
+# 
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.7200 0.3128    0.04725 0.11139         
+# 2   0.8046 0.4776    0.04073 0.10697         
+# 3   0.8315 0.5362    0.03448 0.10447         
+# 4   0.8256 0.5271    0.03629 0.10605         
+# 5   0.8298 0.5388    0.03396 0.10608         
+# 6   0.8325 0.5426    0.03376 0.10413         
+# 7   0.8329 0.5435    0.03509 0.10324         
+# 8   0.8382 0.5537    0.03559 0.11073         
+# 9   0.8391 0.5604    0.03308 0.10260         
+# 10   0.8402 0.5621    0.03291 0.10458         
+# 11   0.8417 0.5632    0.03304 0.10320         
+# 12   0.8425 0.5640    0.03120 0.10175         
+# 13   0.8410 0.5575    0.03073 0.10105         
+# 14   0.8429 0.5607    0.03098 0.10058         
+# 15   0.8391 0.5509    0.02861 0.09296         
+# 16   0.8387 0.5532    0.03434 0.10946         
+# 17   0.8414 0.5582    0.03374 0.10663         
+# 18   0.8387 0.5488    0.03189 0.10568         
+# 19   0.8410 0.5563    0.03009 0.09848         
+# 20   0.8433 0.5620    0.02935 0.09502         
+# 30   0.8379 0.5335    0.03436 0.12288         
+# 40   0.8444 0.5499    0.03442 0.12099        *
+# 50   0.8414 0.5371    0.03131 0.11540         
+# 60   0.8379 0.5168    0.03322 0.12595         
+# 80   0.8341 0.4989    0.03491 0.13221         
+# 85   0.8345 0.5018    0.03506 0.13165         
+# 
+# The top 5 variables (out of 40):
+#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, 
+# Right.Inf.Lat.Vent_volume, rh_isthmuscingulate_thickness, Right.Amygdala_volume
+
+confusionMatrix(Day_Zero_rfe1)
+
+ggplot(data = Day_Zero_rfe1, metric = "Accuracy") + theme_bw()
+ggplot(data = Day_Zero_rfe1, metric = "Kappa") + theme_bw()
+
+Day_Zero_varimp_data <- data.frame(feature = row.names(varImp(Day_Zero_rfe1))[1:10],
+                                   importance = varImp(Day_Zero_rfe1)[1:10, 1])
+save(Day_Zero_varimp_data, file = "Day_Zero_varimp_data.RData")
+
+ggplot(data = Day_Zero_varimp_data, 
+       aes(x = reorder(feature, importance), y = importance, fill = feature)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  labs(x = "Features", y = "Variable Importance") + 
+  #geom_text(aes(label = round(importance, 2)), vjust = 0.5, color="white", size = 4) + 
+  theme_bw() + 
+  coord_flip() +
+  theme(legend.position = "none") +
+  PlotTheme
+
+
+postResample(predict(Day_Zero_rfe1, x_Day_Zero_test), y_Day_Zero_test)
+#   Accuracy     Kappa 
+#  0.7968750 0.3248123 
+
+####################################################
+####################### TreeBag model ##############
+####################################################
+
+Day_Zero_rfe_treeBag <- rfe(x = x_Day_Zero_train, 
+                             y = y_Day_Zero_train, 
+                             sizes = ref_size,
+                             rfeControl = treeBagcontrol)
+save(Day_Zero_rfe_treeBag, file = "Day_Zero_rfe_treeBag.RData")
+load("Day_Zero_rfe_treeBag.RData")
+
+
+Day_Zero_rfe_treeBag
+# Recursive feature selection
+
+# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
+
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
+# 1   0.7006 0.2762    0.04797  0.1029         
+# 2   0.7942 0.4654    0.04575  0.1237         
+# 3   0.8187 0.5119    0.04445  0.1312         
+# 4   0.8145 0.5004    0.04381  0.1235         
+# 5   0.8146 0.5046    0.04396  0.1229         
+# 6   0.8233 0.5244    0.03945  0.1137         
+# 7   0.8176 0.5165    0.04157  0.1168         
+# 8   0.8181 0.5163    0.03792  0.1095         
+# 9   0.8187 0.5211    0.04072  0.1123         
+# 10   0.8191 0.5252    0.04401  0.1236         
+# 11   0.8191 0.5230    0.04202  0.1229         
+# 12   0.8173 0.5209    0.04044  0.1185         
+# 13   0.8149 0.5169    0.04415  0.1197         
+# 14   0.8229 0.5360    0.04098  0.1161         
+# 15   0.8214 0.5333    0.04509  0.1253         
+# 16   0.8222 0.5367    0.04562  0.1313         
+# 17   0.8188 0.5250    0.04080  0.1243         
+# 18   0.8225 0.5387    0.04401  0.1265         
+# 19   0.8172 0.5252    0.04361  0.1196         
+# 20   0.8234 0.5389    0.04371  0.1200         
+# 30   0.8180 0.5194    0.04465  0.1251         
+# 40   0.8210 0.5298    0.04454  0.1256         
+# 50   0.8214 0.5292    0.04701  0.1332         
+# 60   0.8203 0.5293    0.04341  0.1208         
+# 80   0.8317 0.5563    0.04661  0.1297        *
+#   85   0.8252 0.5369    0.04492  0.1275         
+# 
+# The top 5 variables (out of 80):
+#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, 
+# Right.Inf.Lat.Vent_volume, SubCortGrayVol, Right.Amygdala_volume
+
+
+
+predictors(Day_Zero_rfe_treeBag)
+
+confusionMatrix(Day_Zero_rfe_treeBag)
+# Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+# 
+# (entries are percentual average cell counts across resamples)
+# 
+# Reference
+# Prediction   CN  MDN Prog
+# CN   70.1  3.6  7.0
+# MDN   1.6  9.2  2.1
+# Prog  1.7  0.8  3.9
+# 
+# Accuracy (average) : 0.8317
+
+ggplot(data = Day_Zero_rfe_treeBag, metric = "Accuracy") + theme_bw()
+ggplot(data = Day_Zero_rfe_treeBag, metric = "Kappa") + theme_bw()
+
+Day_Zero_treeBag_varimp_data <- data.frame(feature = row.names(varImp(Day_Zero_rfe_treeBag))[1:10],
+                                            importance = varImp(Day_Zero_rfe_treeBag)[1:10, 1])
+save(Day_Zero_treeBag_varimp_data, file = "Day_Zero_treeBag_varimp_data.RData")
+
+postResample(predict(Day_Zero_rfe_treeBag, x_Day_Zero_test), y_Day_Zero_test)
+#   Accuracy     Kappa 
+# 0.8046875 0.4320199  
+
+# plot the importance
+ggplot(data = Day_Zero_treeBag_varimp_data, 
+       aes(x = reorder(feature, importance), y = importance, fill = feature)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  labs(x = "Features", y = "Variable Importance") + 
+  #geom_text(aes(label = round(importance, 2)), vjust = 0.5, color="white", size = 4) + 
+  theme_bw() + 
+  coord_flip() +
+  theme(legend.position = "none") +
+  PlotTheme

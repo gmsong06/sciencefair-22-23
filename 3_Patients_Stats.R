@@ -104,19 +104,17 @@ tapply(ClinDia_Patient_stats$HAND, ClinDia_Patient_stats$DEMENTED, summary)
 # $`3`
 #       B    L    R 
 # 19   15  576 5189
-tapply(ClinDia_Patient_stats$HAND, ClinDia_Patient_stats$DEMENTED, sd) # ERROR
+# tapply(ClinDia_Patient_stats$HAND, ClinDia_Patient_stats$DEMENTED, sd) # ERROR
 #         0        1        3 
 # 2.716721 2.953913 2.511195
 
 ##### t-test
 Clin_2groups <- filter(ClinDia_Patient_stats, DEMENTED != "3")   # use for all three groups. change the demented value
 summary(Clin_2groups$DEMENTED)
-Clin_2groups$DEMENTED <- as.factor(as.character(Age_2groups$DEMENTED))
+Clin_2groups$DEMENTED <- as.factor(as.character(Age_2groups$DEMENTED)) # ERROR
 # t-test
 t.test(age.at.visit ~ DEMENTED, data = Clin_2groups)
 t.test(EDUC ~ DEMENTED, data = Clin_2groups)
-
-
 
 # clinical follow up duration Max
 MaxYear <- tapply(ClinDia_Patient_stats$years_to_Visit, ClinDia_Patient_stats$OASISID, max) 
@@ -234,14 +232,14 @@ save(DEMETED_ClinDia4, file = "DEMETED_ClinDia4.RData")
 #####dataframe that calculates duration of each stage
 #########################################
 df<- DEMETED_ClinDia4
-duration <- data.frame(matrix(ncol = 5, nrow = num.patients))
-colnames(duration) <- c('OASISID', 'age.at.visit', 'CN', 'MCI', 'DMN')
+duration <- data.frame(matrix(ncol = 5, nrow = num.patients)) # ERROR
+colnames(duration) <- c('OASISID', 'age.at.visit', 'CN', 'MCI', 'DMN') # ERROR
 cur.id <- df$OASISID[1]
 cur.letter <- df$DementedLetter[1]
 original.age <- df$age.at.visit[1]
 cur.row <- 1
-duration$OASISID[cur.row] <- cur.id
-duration$age.at.visit[cur.row] <- original.age
+duration$OASISID[cur.row] <- cur.id # ERROR
+duration$age.at.visit[cur.row] <- original.age # ERROR
 for(i in 1:nrow(df)){
   id <- df$OASISID[i]
   age <- df$age.at.visit[i]

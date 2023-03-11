@@ -974,3 +974,4 @@ ggplot(data = DEMENTED_treeBag_varimp_data,
   coord_flip() +
   theme(legend.position = "none") +
   PlotTheme
+

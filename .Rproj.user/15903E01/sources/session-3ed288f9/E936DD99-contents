@@ -116,8 +116,6 @@ Clin_2groups$DEMENTED <- as.factor(as.character(Age_2groups$DEMENTED))
 t.test(age.at.visit ~ DEMENTED, data = Clin_2groups)
 t.test(EDUC ~ DEMENTED, data = Clin_2groups)
 
-
-
 # clinical follow up duration Max
 MaxYear <- tapply(ClinDia_Patient_stats$years_to_Visit, ClinDia_Patient_stats$OASISID, max) 
 summary(MaxYear)
@@ -234,7 +232,7 @@ save(DEMETED_ClinDia4, file = "DEMETED_ClinDia4.RData")
 #####dataframe that calculates duration of each stage
 #########################################
 df<- DEMETED_ClinDia4
-duration <- data.frame(matrix(ncol = 5, nrow = num.patients))
+duration <- data.frame(matrix(ncol = 5, nrow = num.patients)) # ERROR
 colnames(duration) <- c('OASISID', 'age.at.visit', 'CN', 'MCI', 'DMN')
 cur.id <- df$OASISID[1]
 cur.letter <- df$DementedLetter[1]

@@ -48,12 +48,6 @@ save(Centiloid_raw, file = "Centiloid_raw.RData")
 load("Centiloid_raw.RData")
 n_distinct(Centiloid_raw$OASISID)  # 1004 patients
 
-# Centiloid_measure <- Centiloid_raw[, c(3:6)]
-# Centiloid_measure <- na.omit(Centiloid_measure)
-# Centiloid_coor <- cor(Centiloid_measure[,1:4],use="complete.obs")
-# Centiloid_coor
-# highlyCorrelated_Centi <- findCorrelation(Centiloid_measure, cutoff=(0.59),verbose = FALSE)
-
 #################################################
 ############### Freesurf   ######################
 #################################################
@@ -72,14 +66,12 @@ n_distinct(Freesurf_raw$OASISID)      # 1316 patients
 dim(Freesurf_raw)
 Freesurf_measure <- Freesurf_raw[, -c(1, 198, 199)]
 dim(Freesurf_measure)
-#FreeSurf_coor <- cor(Freesurf_measure[,1:n],use="complete.obs")
-#dim(FreeSurf_coor)
+
 zv <- apply(Freesurf_measure, 2, function(x) length(unique(x)) == 1)
 dfr <- Freesurf_measure[, !zv]
 n=length(colnames(dfr))
 FreeSurf_coor <- cor(dfr[,1:n],use="complete.obs")
-# corrplot(FreeSurf_coor, method="circle")
-# print(FreeSurf_coor)
+
 highlyCorrelated <- findCorrelation(FreeSurf_coor, cutoff=(0.59),verbose = FALSE)
 
 # According to literature
@@ -89,43 +81,42 @@ highlyCorrelated <- findCorrelation(FreeSurf_coor, cutoff=(0.59),verbose = FALSE
 #  .60-.79 “strong” 
 #  .80-1.0 “very strong”
 
-# ggpairs(Freesurf_measure)
-
-#print(highlyCorrelated)
-important_var = colnames(Freesurf_measure[,-highlyCorrelated])  #get only weak correlation
+important_var = colnames(Freesurf_measure[,-highlyCorrelated])  # get only weak correlation
 important_var     # 85 variables
 
 Freesruf_measure2 <- Freesurf_measure[,-highlyCorrelated]
-Freesurf_cut <- Freesurf_raw[, -(highlyCorrelated+1)]
+Freesurf_cut <- Freesurf_raw[, -(highlyCorrelated + 1)]
 str(Freesurf_cut) # 2681 obs. of  88 variables
 save(Freesurf_cut, file = "Freesurf_cut.RData")
 
 # Merge data
-total_0 <- merge(ClinDia_Patient,Centiloid_raw, by=c("OASISID", "years_to_Visit"), all.y = TRUE)
-str(total_0)    # 1914 obs. of  12 variables
-summary(total_0)
-colnames(total_0)[which(names(total_0) == "days_to_visit.x")] <- "days_to_visit_ClinDia"
-colnames(total_0)[which(names(total_0) == "days_to_visit.y")] <- "days_to_visit_Centiloid"
-total_1 <- merge(total_0, Freesurf_cut, by=c("OASISID", "years_to_Visit"), all.x = TRUE)
-colnames(total_1)[which(names(total_1) == "days_to_visit")] <- "days_to_visit_MR"
-str(total_1) #2153 obs. of  209 variables
-summary(total_1)
-total_2 <- total_1 %>% relocate(days_to_visit_Centiloid, .before = age.at.visit)
-total_3 <- total_2 %>% relocate(days_to_visit_MR, .before = age.at.visit)
-str(total_3)
-save(total_3, file = "total_3.RData")
+total <- merge(ClinDia_Patient, Centiloid_raw, by=c("OASISID", "years_to_Visit"), all.y = TRUE)
+str(total)    # 1914 obs. of  12 variables
+summary(total)
+colnames(total)[which(names(total) == "days_to_visit.x")] <- "days_to_visit_ClinDia"
+colnames(total)[which(names(total) == "days_to_visit.y")] <- "days_to_visit_Centiloid"
+total <- merge(total, Freesurf_cut, by=c("OASISID", "years_to_Visit"), all.x = TRUE)
+colnames(total)[which(names(total) == "days_to_visit")] <- "days_to_visit_MR"
+str(total) #2153 obs. of  209 variables
+summary(total)
+total <- total %>% 
+  relocate(days_to_visit_Centiloid, .before = age.at.visit) %>% 
+  relocate(days_to_visit_MR, .before = age.at.visit)
 
-n_distinct(total_3$OASISID)    # 1004 SUBJECTS
-summary(total_3$NORMCOG)
-summary(total_3$DEMENTED)
-final <- total_3[!is.na(total_3$NORMCOG),]
+str(total)
+save(total, file = "total.RData")
+
+n_distinct(total$OASISID)    # 1004 SUBJECTS
+summary(total$NORMCOG)
+summary(total$DEMENTED)
+final <- total[!is.na(total$NORMCOG),]
 summary(final$NORMCOG)   # Does the subject have normal cognition: 0 = No, 1 = Yes
 summary(final$DEMENTED) # Does the subject meet criteria for dementia?: 0 = No, 1 = Yes, 3 = 1 from NORMCOG (to avoid NA)
 save(final, file = "final.RData")
 load("final.RData")
 
 #########################################
-######### SURV and BP   #################
+######### SUVR and BP   #################
 #########################################
 
 #    Standardized uptake value ratio (SUVR) is the most common quantitative method used to 
@@ -135,8 +126,9 @@ load("final.RData")
 # as a reference because cerebellum is not affected until late in the progression of AD.
 
 
-## Currently, two amyloid imaging tracers are used in our studies, 
-# i.e. [11C]-Pittsburgh Compound B (PiB) and [18F]-Florbetapir (AV45). 
+## Two tracers
+#   i.e. [11C]-Pittsburgh Compound B (PiB)
+#   [18F]-Florbetapir (AV45)
 # For both tracers, two modeling approaches are implemented: 
 # 1) binding potential (BPND) is calculated using Logan graphical analysis 
 # (Logan 1996; Mintun 2006; Su 2013, 2015, 2016), when full dynamic PET imaging data are available, 
@@ -184,9 +176,10 @@ centiloid_coor    # all the values are highly coorrelated, so can pick only one 
 ####### Plot to include tracer
 summary(final$tracer)
 # AV45  PIB 
-# 741 1041 
+# 741 1041
+
 ############# Centiloid_fBP_TOT_CORTMEAN #########################
-# Violoin plot
+# Violin plot
 ggplot(data = final, mapping = aes(y = Centiloid_fSUVR_TOT_CORTMEAN,                     
                                    x = DEMENTED,                           
                                    color = tracer, fill = tracer)) +                      
@@ -210,30 +203,13 @@ save(final2, file = "final2.RData")
 load("final2.RData")
 missmap(final2)
 
-#Remove NA
+# Remove NA
 final3 <- final2[, -c(2:6)]
 final_NoNA <- na.omit(final3)
 str(final_NoNA)       # 1672 obs. of  90 variables
 n_distinct(final_NoNA$OASISID)  # 894 subjects
 save(final_NoNA, file = "final_NoNA.RData")
 load("final_NoNA.RData")
-# summary(final_NoNA$X5th.Ventricle_volume)
-# summary(final_NoNA$Left.non.WM.hypointensities_volume)
-# final4 <- final_NoNA[ , colSums(final_NoNA[, -c(1:4)]) != 0]
-# str(final4)
-
-
-# final_NoNA[4:25] %>% gather() %>%
-#   ggplot(aes(x=value)) + 
-#   geom_point() +
-#   theme_minimal() +
-#   facet_wrap(~key, scales="free")
-# 
-# final_NoNA[4:25] %>% gather() %>%
-# ggplot(data = final_NoNA, mapping = aes(x = DEMENTED,                           
-#                                         color = DEMENTED, fill = DEMENTED)) + 
-#   geom_point(y = value) +
-#   facet_wrap(~key, scales="free")
 
 ########################################################################################################
 ############################## Modeling ###############################################################
@@ -241,10 +217,10 @@ load("final_NoNA.RData")
 
 # Remove OASISID, NORMCOG, AND tracer
 final_NoNA_DEMENTED <- final_NoNA[, -c(1:2, 4)]
-final_NoNA_DEMENTED2 <- final_NoNA_DEMENTED %>% dplyr::select(-Left.non.WM.hypointensities_volume)
-save(final_NoNA_DEMENTED2, file = "final_NoNA_DEMENTED2.RData")
-load("final_NoNA_DEMENTED2.RData")
-str(final_NoNA_DEMENTED2) #1672 obs. of  86 variables:
+final_NoNA_DEMENTED <- final_NoNA_DEMENTED %>% dplyr::select(-Left.non.WM.hypointensities_volume)
+save(final_NoNA_DEMENTED, file = "final_NoNA_DEMENTED.RData")
+load("final_NoNA_DEMENTED.RData")
+str(final_NoNA_DEMENTED) #1672 obs. of  86 variables:
 
 set.seed(4365677)
 DEMENTED_sampling_vector <- createDataPartition(final_NoNA_DEMENTED2$DEMENTED, p = 0.80, list = FALSE)
@@ -257,7 +233,6 @@ save(DEMENTED_test, file = "DEMENTED_test.RData")
 DEMENTED_pp <- preProcess(DEMENTED_train, method = c("range"))
 norm_DEMENTED_train <- predict(DEMENTED_pp, DEMENTED_train)
 norm_DEMENTED_test <- predict(DEMENTED_pp, DEMENTED_test)
-#summary(norm_DEMENTED_train)
 
 ###########################################################
 ############# use a neural network (nnet)##################
@@ -265,10 +240,10 @@ norm_DEMENTED_test <- predict(DEMENTED_pp, DEMENTED_test)
 
 # create model
 start_time <- proc.time()
-DEMENTED_model <- nnet(DEMENTED ~ ., data = norm_DEMENTED_train, size = 10, maxit = 10000, decay =0.01 )
+DEMENTED_model <- nnet(DEMENTED ~ ., data = norm_DEMENTED_train, size = 10, maxit = 10000, decay = 0.01 )
 end_time <- proc.time()
 end_time - start_time
-#summary(DEMENTED_model)
+summary(DEMENTED_model)
 
 # check accuracy of model
 nn_train_predictions <- predict(DEMENTED_model, norm_DEMENTED_train, type = "class")
@@ -974,3 +949,4 @@ ggplot(data = DEMENTED_treeBag_varimp_data,
   coord_flip() +
   theme(legend.position = "none") +
   PlotTheme
+

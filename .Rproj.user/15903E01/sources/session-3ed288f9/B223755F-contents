@@ -202,7 +202,7 @@ ggplot(data = final, mapping = aes(y = Centiloid_fSUVR_TOT_CORTMEAN,
   labs(title = "Boxplot by DEMENTED")
 
 # no significant difference in tracer. Tracer does not matter too much
-final2 <- final %>% select(-Centiloid_fBP_TOT_CORTMEAN, 
+final2 <- final %>% dplyr::select(-Centiloid_fBP_TOT_CORTMEAN, 
                            -Centiloid_fBP_rsf_TOT_CORTMEAN, 
                            -Centiloid_fSUVR_rsf_TOT_CORTMEAN)
 str(final2)    # 1782 obs. of  95 variables

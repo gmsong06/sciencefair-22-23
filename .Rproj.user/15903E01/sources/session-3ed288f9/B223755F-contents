@@ -466,21 +466,6 @@ names(ImpVar_Com) <- c("NeuralNetwork","RandomForest", "Decision Tree")
 View(ImpVar_Com)
 write_xlsx(ImpVar_Com,"Important_Factors_3.xlsx")
 
-
-
-##################################################################
-################### ROC ##########################################
-##################################################################
-
-
-
-par(pty="s") 
-nnROC <- roc(vdata_Y ~ LR_predict,
-             plot=TRUE,print.auc=TRUE,
-             col="green",lwd =4,
-             legacy.axes=TRUE,
-             main="ROC Curves")
-
 ################################################
 ########### Plot Important Variables ###########
 ################################################
@@ -989,7 +974,3 @@ ggplot(data = DEMENTED_treeBag_varimp_data,
   coord_flip() +
   theme(legend.position = "none") +
   PlotTheme
-
-
-
-

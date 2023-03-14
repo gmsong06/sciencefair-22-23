@@ -11,7 +11,7 @@ control <- rfeControl(functions = rfFuncs, # random forest
                       repeats = 5, # number of repeats
                       number = 10) # number of folds
 
-treeBagcontrol <- rfeControl(functions = treebagFuncs, # random forest
+treeBagcontrol <- rfeControl(functions = treebagFuncs, # tree bag
                              method = "repeatedcv", # repeated cv
                              repeats = 5, # number of repeats
                              number = 10) # number of folds
@@ -350,41 +350,6 @@ postResample(predict(VisitProg_rfe1, x_VisitProg_test), y_VisitProg_test)
 ####################################################
 ####################### TreeBag model ##############
 ####################################################
-VisitProg_rfe_treeBag2 <- rfe(x = x_VisitProg_train, 
-                             y = y_VisitProg_train, 
-                             sizes = ref_size,
-                             rfeControl = treeBagcontrol)
-VisitProg_rfe_treeBag2
-
-# Recursive feature selection
-# 
-# Outer resampling method: Cross-Validated (10 fold, repeated 5 times) 
-# 
-# Resampling performance over subset size:
-#   
-#   Variables Accuracy  Kappa AccuracySD KappaSD Selected
-# 1   0.7515 0.3194    0.03262 0.09001         
-# 2   0.7902 0.3907    0.03087 0.09620         
-# 3   0.8234 0.4743    0.02626 0.08754         
-# 4   0.8260 0.4767    0.02587 0.08536         
-# 5   0.8291 0.4845    0.02708 0.09298         
-# 6   0.8367 0.5097    0.02419 0.07845         
-# 7   0.8365 0.5090    0.02953 0.09906         
-# 8   0.8346 0.5052    0.02139 0.07373         
-# 9   0.8361 0.5082    0.01971 0.07428         
-# 10   0.8396 0.5167    0.02162 0.07722         
-# 11   0.8394 0.5195    0.02305 0.07741         
-# 12   0.8412 0.5231    0.02491 0.08797         
-# 13   0.8412 0.5214    0.02657 0.09077         
-# 85   0.8494 0.5357    0.02117 0.07491        *
-#   
-#   The top 5 variables (out of 85):
-#   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, 
-# Right.Inf.Lat.Vent_volume, Left.Amygdala_volume, Right.Amygdala_volume
-
-
-ggplot(data = VisitProg_rfe_treeBag2, metric = "Accuracy") + theme_bw()
-
 VisitProg_rfe_treeBag <- rfe(x = x_VisitProg_train, 
                             y = y_VisitProg_train, 
                             sizes = ref_size,
@@ -431,7 +396,6 @@ VisitProg_rfe_treeBag
 # The top 5 variables (out of 50):
 #   Centiloid_fSUVR_TOT_CORTMEAN, TOTAL_HIPPOCAMPUS_VOLUME, 
 # Right.Inf.Lat.Vent_volume, Left.Amygdala_volume, Right.Amygdala_volume
-
 
 
 predictors(VisitProg_rfe_treeBag)
@@ -648,3 +612,4 @@ ggplot(data = Day_Zero_treeBag_varimp_data,
   coord_flip() +
   theme(legend.position = "none") +
   PlotTheme
+

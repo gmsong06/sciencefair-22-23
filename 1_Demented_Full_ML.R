@@ -9,7 +9,7 @@
 # Decision Tree
 
 ClinDia_raw <- read.csv(file = 'OASIS3_UDSd1_diagnoses.csv')
-str(ClinDia_raw)    # 8499 obs. of  149 variables
+str(ClinDia_raw)
 save(ClinDia_raw, file = "ClinDia_raw.RData")
 ClinDia_Patient <- ClinDia_raw[, 1:7]
 ClinDia_Patient <- ClinDia_Patient[, -5]

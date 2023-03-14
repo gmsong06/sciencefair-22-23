@@ -575,3 +575,4 @@ ggplot(data = VisitProg_varimp_data,
 postResample(predict(VisitProg_rfe1, x_VisitProg_test), y_VisitProg_test)
 #  Accuracy     Kappa 
 # 0.8647059 0.5734701 
+
